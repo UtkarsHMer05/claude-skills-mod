@@ -28,15 +28,14 @@ Answer `y` to add the marketplace, then pick a scope.
 
 ### Cloud sessions
 
-`.claude/skills/usage-card` links to `mods/usage-card`, so a Claude Code session opened on this repo (including a cloud session) loads the usage card by itself, once the workspace is trusted. The bars appear after the session's first reply. To get the card in cloud sessions on another repo, copy `mods/usage-card` into that repo's `.claude/skills/usage-card`.
+A Claude Code session opened on this repo, including a cloud session, loads both plugins by itself once the workspace is trusted, with nothing to install:
 
-From a shell:
+- `.claude/skills/skills-mod` links to the repo root (the `skills-mod` plugin).
+- `.claude/skills/usage-card` links to `mods/usage-card`.
 
-```bash
-claude plugin install skills-mod --marketplace UtkarsHMer05/claude-skills-mod
-```
+The usage bars appear after the session's first reply. Where a plugin is also installed from the marketplace (as on a laptop), the installed copy is the one that loads, so nothing loads twice.
 
-In the desktop app, click + next to the prompt box, then Plugins, Add marketplace with `UtkarsHMer05/claude-skills-mod`, then Add plugin.
+For cloud sessions on another repo, install from the marketplace in that session, or copy `mods/usage-card` into that repo's `.claude/skills/usage-card`.
 
 ## Develop
 
