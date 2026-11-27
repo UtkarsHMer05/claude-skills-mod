@@ -227,6 +227,63 @@ function weeklyLine($: EngineInterface, e: any, l: Limit, now: number) {
 
 let ticker: Timer | undefined
 
+// ── account-wide usage ───────────────────────────────────────────────────────
+// The rate-limit figures on Claude Code's own replies only move when Code is
+// used. The account's usage (what claude.ai's Settings → Usage shows) also
+// counts Chat, so the mod asks for it once a minute with the session's own
+// login: `$.session.authorize()` hands back an opaque handle and the engine
+// adds the credential itself, so the mod never sees it.
+
+const USAGE_URL = 'https://api.anthropic.com/api/oauth/usage'
+const POLL_MS = 60_000
+let poller: Timer | undefined
+
+/** `{ five_hour: { utilization, resets_at }, seven_day: {...} }` → Limit[]. */
+function fromAccount(body: unknown): Limit[] {
+  const out: Limit[] = []
+  for (const w of WINDOWS) {
+    const v = (body as Record<string, any> | null)?.[w.kind]
+    if (!v || typeof v.utilization !== 'number') continue
+    out.push({ kind: w.kind, percentUsed: v.utilization, resetsAt: typeof v.resets_at === 'string' ? v.resets_at : undefined })
+  }
+  return out
+}
+
+/** Asks for the account's usage; shows and shares it when it changed. */
+async function pollAccount($: EngineInterface): Promise<void> {
+  const auth = await $.session.authorize().catch(() => null)
+  if (!auth || auth.kind !== 'bearer') {
+    diag.account = auth ? 'not available with an API key' : 'no Claude login in this session'
+    return
+  }
+  const res = await $.http
+    .fetch(USAGE_URL, { auth: auth.handle, headers: { 'anthropic-beta': 'oauth-2025-04-20' } })
+    .catch((err: unknown) => ({ ok: false, status: 0, text: String(err) }))
+  const now = new Date(await $.clock.now()).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  if (!res.ok) {
+    diag.account = `failed at ${now} (HTTP ${res.status})`
+    return
+  }
+  let list: Limit[] = []
+  try {
+    list = fromAccount(JSON.parse(res.text))
+  } catch {
+    // an answer we can't read leaves the last reading in place
+  }
+  if (!list.length) {
+    diag.account = `answered at ${now} but with no 5-hour or weekly figures`
+    return
+  }
+  diag.account = `ok at ${now}`
+  const cur = await read($, limitsA)
+  const same = (a: Limit[], b: Limit[]) =>
+    a.length === b.length && a.every(x => b.some(y => y.kind === x.kind && Math.round(y.percentUsed) === Math.round(x.percentUsed) && y.resetsAt === x.resetsAt))
+  if (same(list, cur)) return
+  await show($, list)
+  // Writing only on a change keeps the menu bar's file watcher quiet while idle.
+  await $.store.set('latest', list).catch(() => undefined)
+}
+
 /** What /usage-card-status reports, to tell "not loaded" from "no data" from "wrong surface". */
 const diag = {
   surface: '(not drawn yet)',
@@ -234,6 +291,7 @@ const diag = {
   startKinds: [] as string[],
   measures: 0,
   measureKinds: [] as string[],
+  account: 'not asked yet',
 }
 const kinds = (list: readonly unknown[] | undefined) =>
   (list ?? []).map(l => String((l as Limit)?.kind ?? '?'))
@@ -270,6 +328,11 @@ export const register: Register = on => {
     flowTimer?.cancel()
     flowTimer = undefined
 
+    // Account-wide usage (Chat included): once now, then every minute.
+    poller?.cancel()
+    void pollAccount($)
+    poller = $.clock.every(POLL_MS, () => void pollAccount($))
+
     ticker?.cancel()
     ticker = $.clock.every(30_000, () => {
       void (async () => {
@@ -294,6 +357,7 @@ export const register: Register = on => {
         `measure events: ${diag.measures} (rate-limit kinds: ${diag.measureKinds.join(', ') || 'none'})`,
         `shown now: ${shown.map(l => `${l.kind} ${Math.round(leftOf(l))}% left`).join(', ') || 'none'}`,
         `shared store: ${stored.length ? stored.map(l => l.kind).join(', ') : 'empty'}`,
+        `account usage (includes Chat): ${diag.account}`,
       ].join('\n'),
     }
   })

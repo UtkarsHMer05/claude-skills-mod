@@ -15,6 +15,8 @@ function engine0(on: any, usage: Lim[]) {
   on('session.measure', (_$: any, e: any) => ({ changed: e.changed }))
   on('session.start', (_$: any, e: any) => ({ cwd: e.cwd }))
   on('session.usage', () => ({ value: { startedAt: 0, context: {}, rateLimits: usage } }))
+  on('command.register', (_$: any, e: any) => ({ value: { command: e.name } }))
+  on('session.info', () => ({ value: { isHosted: false } }))
   return clock
 }
 
@@ -84,3 +86,29 @@ for (const surface of ['terminal', 'desktop'] as const) {
     }
   })
 }
+
+test('account usage (Chat included) fills the bars without a Code reply', async ($, on) => {
+  const clock = engine(on)
+  const asked: string[] = []
+  on('session.authorize', () => ({ value: { handle: 'h1', kind: 'bearer' } }))
+  on('http.fetch', (_$: any, e: any) => {
+    asked.push(`${e.url} auth=${e.init?.auth}`)
+    return {
+      value: {
+        status: 200, ok: true, headers: {},
+        text: JSON.stringify({
+          five_hour: { utilization: 35, resets_at: new Date(90 * 60_000).toISOString() },
+          seven_day: { utilization: 60, resets_at: null },
+        }),
+      },
+    }
+  })
+  await $.session.start({ cwd: '/', surface: 'desktop', isInteractive: true } as never)
+  await new Promise(r => setTimeout(r, 20))
+  await clock.advance(1000)
+  const ui = await mount($, 'desktop')
+  const t = await texts(ui)
+  expect(asked[0]).toBe('https://api.anthropic.com/api/oauth/usage auth=h1')
+  expect(t).toContain('65% left')
+  expect(t).toContain('40% left')
+})
