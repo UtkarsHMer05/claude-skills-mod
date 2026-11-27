@@ -5,11 +5,15 @@
 # <swiftbar.hideRunInTerminal>true</swiftbar.hideRunInTerminal>
 # <swiftbar.hideLastUpdated>true</swiftbar.hideLastUpdated>
 # <swiftbar.hideDisablePlugin>true</swiftbar.hideDisablePlugin>
+# <swiftbar.refreshOnOpen>true</swiftbar.refreshOnOpen>
 """
 SwiftBar menu bar plugin. Reads the numbers the usage-card mod saves after
 each Claude Code reply on this Mac (no network calls) and draws them as
 images: two labelled mini bars in the menu bar, and a card per limit in the
-menu. Refreshes every 10 seconds (the ".10s" in the file name).
+menu. It refreshes when a Claude Code turn ends (a Stop hook opens
+swiftbar://refreshplugin?name=usage-card), when you open its menu, and
+otherwise only every 30 minutes (the ".30m" in the file name), so a limit
+that resets while you are away still shows as reset.
 
 Uses macOS's own /usr/bin/python3 and its Pillow. Images are drawn at 2x and
 tagged 144 dpi, so AppKit shows them at half their pixel size, sharp on Retina.
@@ -243,6 +247,10 @@ def pair(fn, *a):
 # ── output ───────────────────────────────────────────────────────────────────
 def main():
     now = time.time()
+    try:  # when it last ran, so a refresh can be checked
+        open(os.path.expanduser('~/Library/Caches/usage-card-menubar.last'), 'w').write(str(int(now)))
+    except OSError:
+        pass
     latest, saved = load()
     rows = []
     for kind in ('five_hour', 'seven_day'):
