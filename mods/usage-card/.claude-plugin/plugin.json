@@ -1,0 +1,6 @@
+{
+  "name": "usage-card",
+  "version": "0.1.0",
+  "description": "A clean card above the prompt showing your 5-hour and weekly Claude usage limits with progress bars and reset times",
+  "types": "./types/index.d.ts"
+}

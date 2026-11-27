@@ -1,6 +1,9 @@
 {
   "name": "skills-mod",
-  "description": "Claude Code skills and a hooks mod by UtkarsHMer05.",
+  "description": "Claude Code skills and mods by UtkarsHMer05.",
   "owner": { "name": "UtkarsHMer05" },
-  "plugins": [{ "name": "skills-mod", "source": "./" }]
+  "plugins": [
+    { "name": "skills-mod", "source": "./" },
+    { "name": "usage-card", "source": "./mods/usage-card" }
+  ]
 }

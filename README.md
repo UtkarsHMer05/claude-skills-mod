@@ -8,6 +8,7 @@ Claude Code skills plus a small hooks mod, packaged as a single plugin.
 
 - `skills/commit-message`: writes a Conventional Commits message for staged changes.
 - `hooks/register.ts`: blocks Claude from editing or writing `.env` files, and shows the last failed shell command in the status line.
+- `mods/usage-card`: a separate mod that shows how much of your 5-hour and weekly Claude plan limits is left, as gradient bars above the prompt, with reset times. It reads only the rate-limit figures Claude Code already receives; nothing is fetched.
 
 ## Install
 
@@ -15,6 +16,12 @@ At the prompt of a Claude Code terminal session:
 
 ```
 /plugin install skills-mod --marketplace UtkarsHMer05/claude-skills-mod
+```
+
+For the usage card:
+
+```
+/plugin install usage-card --marketplace UtkarsHMer05/claude-skills-mod
 ```
 
 Answer `y` to add the marketplace, then pick a scope.
