@@ -26,6 +26,10 @@ For the usage card:
 
 Answer `y` to add the marketplace, then pick a scope.
 
+### Cloud sessions
+
+`.claude/skills/usage-card` links to `mods/usage-card`, so a Claude Code session opened on this repo (including a cloud session) loads the usage card by itself, once the workspace is trusted. The bars appear after the session's first reply. To get the card in cloud sessions on another repo, copy `mods/usage-card` into that repo's `.claude/skills/usage-card`.
+
 From a shell:
 
 ```bash
