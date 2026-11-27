@@ -9,7 +9,7 @@
 SwiftBar menu bar plugin. Reads the numbers the usage-card mod saves after
 each Claude Code reply on this Mac (no network calls) and draws them as
 images: two labelled mini bars in the menu bar, and a card per limit in the
-menu. Refreshes every minute (the ".1m" in the file name).
+menu. Refreshes every 10 seconds (the ".10s" in the file name).
 
 Uses macOS's own /usr/bin/python3 and its Pillow. Images are drawn at 2x and
 tagged 144 dpi, so AppKit shows them at half their pixel size, sharp on Retina.
