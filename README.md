@@ -28,14 +28,11 @@ Answer `y` to add the marketplace, then pick a scope.
 
 ### Cloud sessions
 
-A Claude Code session opened on this repo, including a cloud session, loads both plugins by itself once the workspace is trusted, with nothing to install:
+`.claude/settings.json` registers this repo as a marketplace and enables both plugins (`skills-mod@skills-mod`, `usage-card@skills-mod`). A Claude Code session opened on this repo, including a cloud session, installs and loads them once the workspace is trusted, with nothing to run by hand. The `.claude/skills/*` links remain as a skills-only fallback.
 
-- `.claude/skills/skills-mod` links to the repo root (the `skills-mod` plugin).
-- `.claude/skills/usage-card` links to `mods/usage-card`.
+The usage bars appear after the session's first reply, once Claude Code has received the rate-limit figures.
 
-The usage bars appear after the session's first reply. Where a plugin is also installed from the marketplace (as on a laptop), the installed copy is the one that loads, so nothing loads twice.
-
-For cloud sessions on another repo, install from the marketplace in that session, or copy `mods/usage-card` into that repo's `.claude/skills/usage-card`.
+For cloud sessions on another repo, copy `.claude/settings.json` into that repo, or install from the marketplace in that session.
 
 ## Develop
 
