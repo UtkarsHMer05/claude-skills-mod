@@ -227,9 +227,39 @@ function weeklyLine($: EngineInterface, e: any, l: Limit, now: number) {
 
 let ticker: Timer | undefined
 
+/** What /usage-card-status reports, to tell "not loaded" from "no data" from "wrong surface". */
+const diag = {
+  surface: '(not drawn yet)',
+  isHosted: undefined as boolean | undefined,
+  startKinds: [] as string[],
+  measures: 0,
+  measureKinds: [] as string[],
+}
+const kinds = (list: readonly unknown[] | undefined) =>
+  (list ?? []).map(l => String((l as Limit)?.kind ?? '?'))
+
+/** A muted placeholder while no reading has arrived, so the band shows the mod is alive. */
+function waitingRow($: EngineInterface, e: any) {
+  const { Box, Text } = $.ui.resolve(e)
+  return (
+    <Box key="usage-waiting" flexDirection="row" justifyContent="center" width="100%">
+      <Text key="w" size="caption" dimColor wrap="truncate-end">
+        {'Usage limits: waiting for the first reading'}
+      </Text>
+    </Box>
+  )
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
+    await $.command.register({
+      name: 'usage-card-status',
+      description: 'Show what the usage-card mod sees (surface, rate-limit data)',
+    })
+    const info = await $.session.info().catch(() => undefined)
+    diag.isHosted = info?.isHosted
     const usage = await $.session.usage().catch(() => undefined)
+    diag.startKinds = kinds(usage?.rateLimits)
     const mine = keep(usage?.rateLimits)
     const start = mine.length ? mine : await shared($)
     // Fill the bars in from empty when the session opens.
@@ -252,8 +282,26 @@ export const register: Register = on => {
     return next(e)
   })
 
+  on('command.run', { command: 'usage-card-status' }, async $ => {
+    const shown = await read($, limitsA)
+    const stored = await shared($)
+    return {
+      text: [
+        'usage-card is loaded.',
+        `surface: ${diag.surface}`,
+        `hosted: ${diag.isHosted ?? 'unknown'}`,
+        `rate limits at start: ${diag.startKinds.join(', ') || 'none'}`,
+        `measure events: ${diag.measures} (rate-limit kinds: ${diag.measureKinds.join(', ') || 'none'})`,
+        `shown now: ${shown.map(l => `${l.kind} ${Math.round(leftOf(l))}% left`).join(', ') || 'none'}`,
+        `shared store: ${stored.length ? stored.map(l => l.kind).join(', ') : 'empty'}`,
+      ].join('\n'),
+    }
+  })
+
   on('session.measure', async ($, e, next) => {
+    diag.measures++
     if (e.changed.includes('rateLimits')) {
+      diag.measureKinds = kinds(e.rateLimits)
       const list = keep(e.rateLimits)
       if (list.length) {
         await show($, list)
@@ -266,12 +314,13 @@ export const register: Register = on => {
   // ABOVE the chat box: the 5-hour limit (desktop), or both lines (terminal).
   on('ui.render', { component: 'AbovePrompt' }, async ($, e, next) => {
     if (e.props.hasSurvey) return next(e)
+    diag.surface = String(e.surface)
 
     if (e.surface === 'desktop') {
       // One line: 5-hour, a divider, then weekly with a shorter bar.
       const five = await reading($, 'five_hour')
       const week = await reading($, 'seven_day')
-      if (!five && !week) return next(e)
+      if (!five && !week) return waitingRow($, e)
       const { Box, Text } = $.ui.resolve(e)
       // Both bars the same size: 140 x 10 px. The line spreads across the strip
       // with equal space at both ends and between every part.
@@ -297,7 +346,7 @@ export const register: Register = on => {
       w: (typeof WINDOWS)[number]
       l: Limit
     }[]
-    if (rows.length === 0) return next(e)
+    if (rows.length === 0) return waitingRow($, e)
     const { Box, Text } = $.ui.resolve(e)
     const cols = Math.max(30, (e.props.bodyColumns ?? 80) - 4)
     const barW = Math.max(10, Math.min(30, cols - 42))
