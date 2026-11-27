@@ -10,7 +10,8 @@
 SwiftBar menu bar plugin. Reads the numbers the usage-card mod saves after
 each Claude Code reply on this Mac (no network calls) and draws them as
 images: two labelled mini bars in the menu bar, and a card per limit in the
-menu. It refreshes when a Claude Code turn ends (a Stop hook opens
+menu. It refreshes the moment the mod saves a new reading (a launch agent
+from scripts/install-menubar-watcher.sh watches the file and opens
 swiftbar://refreshplugin?name=usage-card), when you open its menu, and
 otherwise only every 30 minutes (the ".30m" in the file name), so a limit
 that resets while you are away still shows as reset.
@@ -195,7 +196,7 @@ THEMES = {
 def title_image(rows, theme):
     """Menu bar: '5h ▬▬▬ 82%   W ▬▬▬ 78%' with a coloured dot of status per window."""
     label, num, track, _ = THEMES[theme]
-    bar_w, bar_h, gap = 26, 5, 5
+    bar_w, bar_h, gap = 50.3, 5, 5
     parts = []
     for r in rows:
         pct = f"{r['left']}%"
@@ -215,6 +216,9 @@ def title_image(rows, theme):
         x += bar_w + gap
         c.text(x, base, pct, fs, status(left) + (255,) if theme == 'dark' else mix(status(left), (0, 0, 0), 0.25) + (255,), 'Semibold')
         x += c.text_w(pct, fs, 'Semibold') + 11
+        if short != parts[-1][0]:
+            # A thin divider centred in the space between 5h and Wk.
+            c.pill(x - 5.5 - 0.6, 5.5, 1.2, 11, track[:3] + (110,))
     return c.b64()
 
 
@@ -274,7 +278,8 @@ def main():
         return
 
     tip = '   '.join(f"{r['title']}: {r['left']}% left" for r in rows)
-    print(f'| image={pair(title_image, rows)} tooltip={tip}')
+    title = title_image(rows, 'dark')
+    print(f'| image={title} tooltip={tip}')
     print('---')
     for r in rows:
         print(f'| image={pair(card_image, r)}')
