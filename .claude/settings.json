@@ -1,0 +1,11 @@
+{
+  "extraKnownMarketplaces": {
+    "skills-mod": {
+      "source": { "source": "github", "repo": "UtkarsHMer05/claude-skills-mod" }
+    }
+  },
+  "enabledPlugins": {
+    "skills-mod@skills-mod": true,
+    "usage-card@skills-mod": true
+  }
+}
